@@ -1,46 +1,49 @@
-import CredentialsProvider  from "next-auth/providers/credentials";
+import { NextAuthOptions } from "next-auth";
+import CredentialsProvider from "next-auth/providers/credentials";
 
-
-export const authOptions = {
-    session: {
-        jwt: true,
-        maxAge: 60, 
-        updateAge: 30 
-    },
+export const authOptions : NextAuthOptions = {
     providers: [
         CredentialsProvider({
+            id: "credentials",
             name: "Credentials",
             credentials: {
                 username: { label: "Username", type: "text" },
                 password: { label: "Password", type: "password" },
             },
-            async authorize(credentials):Promise<any> {
-                console.log("under progress",credentials);
+            async authorize(credentials, req): Promise<any> {
                 const username = credentials?.username;
-                const password=credentials?.password;
-                const user = { id: 1,username,password}
-                return  user
-    },
+                const password = credentials?.password;
+                if (username === "admin" && password === "admin") { 
+                    const user = { id: 1, username, password };
+                    return user;
+                } else {
+                    return null;
+                }
+            },
         })
-],
-callbacks:{
-    async jwt({token, user}:{token:any,user:any}) { 
-        if(user){
-            token.id=user.id
-        token.username=user.username
-        token.password=user.password    
+    ],
+    callbacks: {
+        async jwt({ token, user }: { token: any, user: any }) {
+            if (user) {
+                token.id = user.id;
+                token.username = user.username;
+            }
+            return token;
+        },
+        async session({ session, token }: { session: any, token: any }) {
+            if (token) {
+                session.user.id = token.id;
+                session.user.username = token.username;
+            }
+            console.log(session);
+            return session;
         }
-        return token
     },
-    async session({session, token}:{session:any,token:any}) {
-       session.user.id=token.id
-        session.user.username=token.username
-        session.user.password=token.password
-        console.log(session);
-        
-        
-        return session
-    }
-},
-    secret:"abcdsc",
+    session: {
+        strategy: 'jwt',
+    },
+    secret: process.env.NEXTAUTH_SECRET,
+    pages: {
+        signIn: "/signin"
+    },
 }
